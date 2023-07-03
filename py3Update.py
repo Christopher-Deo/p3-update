@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import logging
 
 
 def get_dependencies_from_code(file_path):
@@ -29,6 +30,17 @@ def update_code_to_python_3_10(directory):
     subprocess.call(['2to3', '-w', directory])
 
 
+def setup_logging(log_file):
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
+
+
 def main():
     directory = input("Enter directory path: ")
 
@@ -37,23 +49,30 @@ def main():
         return
 
     log_file = os.path.join(directory, "compatibility_issues.log")
-    with open(log_file, "w") as log:
-        for root, _, files in os.walk(directory):
-            for file in files:
-                if file.endswith(".py"):
-                    file_path = os.path.join(root, file)
-                    dependencies = get_dependencies_from_code(file_path)
+    setup_logging(log_file)
+    logger = logging.getLogger(__name__)
 
-                    for dependency in dependencies:
-                        compatibility, error_msg = check_dependency_compatibility(
-                            dependency)
-                        if not compatibility:
-                            log.write(
-                                f"Project: {root}\nDependency: {dependency}\nError: {error_msg}\n\n")
+    logger.info("Scanning code for dependencies and checking compatibility...")
 
-    print("Dependency compatibility check complete.")
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file.endswith(".py"):
+                file_path = os.path.join(root, file)
+                dependencies = get_dependencies_from_code(file_path)
+
+                for dependency in dependencies:
+                    compatibility, error_msg = check_dependency_compatibility(
+                        dependency)
+                    if not compatibility:
+                        logger.warning("Compatibility issue detected:")
+                        logger.warning(f"Project: {root}")
+                        logger.warning(f"Dependency: {dependency}")
+                        logger.warning(f"Error: {error_msg}")
+                        logger.warning("")
+
+    logger.info("Dependency compatibility check complete.")
     update_code_to_python_3_10(directory)
-    print("Code updated to Python 3.10 successfully.")
+    logger.info("Code updated to Python 3.10 successfully.")
 
 
 if __name__ == '__main__':

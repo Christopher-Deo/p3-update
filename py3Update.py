@@ -1,79 +1,61 @@
 import os
-import re
 import subprocess
-import logging
+
+# Step 1: Backup Your Code
 
 
-def get_dependencies_from_code(file_path):
-    with open(file_path, 'r') as file:
-        content = file.read()
-        dependencies = set(re.findall(r'^\s*from\s+(\w+)', content, re.MULTILINE) +
-                           re.findall(r'^\s*import\s+(\w+)', content, re.MULTILINE))
-    return dependencies
-
-
-def check_dependency_compatibility(dependency):
-    # Run pip check command to check compatibility for a specific dependency
-    process = subprocess.Popen(
-        ['pip', 'check', dependency], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    _, error_output = process.communicate()
-
-    # Check if there are any compatibility issues
-    if error_output:
-        return False, error_output.decode('utf-8').strip()
-    else:
-        return True, None
-
-
-def update_code_to_python_3_10(directory):
-    # Run 2to3 tool to update code to Python 3.10
-    subprocess.call(['2to3', '-w', directory])
-
-
-def setup_logging(log_file):
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
-    )
-
-
-def main():
-    directory = input("Enter directory path: ")
-
-    if not os.path.isdir(directory):
-        print("Invalid directory path.")
-        return
-
-    log_file = os.path.join(directory, "compatibility_issues.log")
-    setup_logging(log_file)
-    logger = logging.getLogger(__name__)
-
-    logger.info("Scanning code for dependencies and checking compatibility...")
-
-    for root, _, files in os.walk(directory):
+def backup_code(code_dir, backup_dir):
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+    for root, dirs, files in os.walk(code_dir):
         for file in files:
-            if file.endswith(".py"):
+            if file.endswith('.py'):
                 file_path = os.path.join(root, file)
-                dependencies = get_dependencies_from_code(file_path)
+                backup_path = os.path.join(backup_dir, file)
+                os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+                shutil.copy2(file_path, backup_path)
 
-                for dependency in dependencies:
-                    compatibility, error_msg = check_dependency_compatibility(
-                        dependency)
-                    if not compatibility:
-                        logger.warning("Compatibility issue detected:")
-                        logger.warning(f"Project: {root}")
-                        logger.warning(f"Dependency: {dependency}")
-                        logger.warning(f"Error: {error_msg}")
-                        logger.warning("")
-
-    logger.info("Dependency compatibility check complete.")
-    update_code_to_python_3_10(directory)
-    logger.info("Code updated to Python 3.10 successfully.")
+# Step 2: Scan Dependencies
 
 
-if __name__ == '__main__':
-    main()
+def scan_dependencies(code_dir):
+    process = subprocess.Popen(
+        ['pipdeptree', '-f', code_dir], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    print(output.decode())
+
+# Step 3: Review Python 2 to 3 Changes (Manual Step)
+
+# Step 4: Modify Your Code
+
+
+def modify_code(code_dir):
+    for root, dirs, files in os.walk(code_dir):
+        for file in files:
+            if file.endswith('.py'):
+                file_path = os.path.join(root, file)
+                subprocess.run(['2to3', '-w', file_path])
+                subprocess.run(['futurize', '-w', file_path])
+                subprocess.run(['modernize', '-w', file_path])
+
+# Step 5: Test Your Code (Manual Step)
+
+# Step 6: Update Dependencies (Manual Step)
+
+
+# Directory paths
+code_dir = 'C://Users/deoc/Coding-Projects/Python/Python-Scripts'
+backup_dir = 'C://Users/deoc/Coding-Projects/Python/Python-Scripts-Backup'
+
+# Step 1: Backup Your Code
+backup_code(code_dir, backup_dir)
+
+# Step 2: Scan Dependencies
+scan_dependencies(code_dir)
+
+# Step 4: Modify Your Code
+modify_code(code_dir)
+
+# Step 5: Test Your Code (Manual Step)
+
+# Step 6: Update Dependencies (Manual Step)
